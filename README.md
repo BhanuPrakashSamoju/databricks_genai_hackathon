@@ -60,18 +60,20 @@ The **Movie Recommendation RAG** is an AI-powered chatbot designed to generate m
     - Builds a RAG chain
     - Logs & registers this RAG chain to Unity Catalog
     - Serve the latest logged model as an endpoint
+    - Log the inferences to the payload inference table
 9. Now, create a Hugging Face space & copy the contents of ChatBot folder into the space
     - Add the Space level secrets _API_TOKEN_ as the value of **_spn_dbx_secret_** & _API_END_POINT_ as the end point url of the served model by going into the space settings.
 
 ## Next steps:
 
 1. Implement a feedback loop to do reinforcement learning through human feedback for providing personalized recommendations with respect to each user.
-2. Chunk the documents & implement context & content based filtering for improving the recommendations of the generation model.
-3. Secure personal user information from leaking by the LLM
-4. Improve the UI 
-5. Create workflows to orchestrate the flow
-6. Implement Data Governance to secure the user data
-7. Bundle the code through Databricks Asset Bundles
+2. Implement the LLM evaluation for Hallucination, Toxicity, Relevance etc.
+3. Chunk the documents & implement context & content based filtering for improving the recommendations of the generation model.
+4. Secure personal user information from leaking by the LLM
+5. Improve the UI 
+6. Create workflows to orchestrate the flow
+7. Implement Data Governance to secure the user data
+8. Bundle the code through Databricks Asset Bundles
 
 ## Disclaimer
 
