@@ -1,4 +1,18 @@
 # Databricks notebook source
+# MAGIC %md
+# MAGIC - Name: movies
+# MAGIC - Purpose: Read the moies dataset from the ml-20m data sets & find the imdb ids of all these movies
+# MAGIC - Author:`Bhanu Prakash`
+# MAGIC - Dataset Citation: 
+# MAGIC   > F. Maxwell Harper and Joseph A. Konstan. 2015. The MovieLens Datasets: History and Context. ACM Transactions on Interactive Intelligent Systems (TiiS) 5, 4, Article 19 (December 2015), 19 pages. DOI=<http://dx.doi.org/10.1145/2827872>
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Importing libraries & setting variables
+
+# COMMAND ----------
+
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
 
@@ -16,16 +30,31 @@ movies_table_name = dbutils.widgets.get("movies_table_name")
 
 # COMMAND ----------
 
+overwrite_schema = True
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Reading the Input Data & Output Table name
+
+# COMMAND ----------
+
 movies_df = spark.read.csv(movies_path, header = True)
 links_df = spark.read.csv(links_path, header = True)
 
 # COMMAND ----------
 
-overwrite_schema = True
+# MAGIC %md
+# MAGIC #### Data Exploration
 
 # COMMAND ----------
 
 display(movies_df.count())
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Final Transformations & storing it into intermediate table
 
 # COMMAND ----------
 

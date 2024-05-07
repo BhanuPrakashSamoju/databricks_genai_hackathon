@@ -1,6 +1,32 @@
 # Databricks notebook source
+# MAGIC %md
+# MAGIC - **Name: movies_info (Cleaned)**
+# MAGIC - Purpose: Create a clean movies DB that is a combination of ml-20m dataset & IMDB dataset. The join is achieved through IMDB Ids
+# MAGIC - Author:`Bhanu Prakash`
+# MAGIC - Dataset Citation: 
+# MAGIC   > F. Maxwell Harper and Joseph A. Konstan. 2015. The MovieLens Datasets: History and Context. ACM Transactions on Interactive Intelligent Systems (TiiS) 5, 4, Article 19 (December 2015), 19 pages. DOI=<http://dx.doi.org/10.1145/2827872>
+# MAGIC   
+# MAGIC   > Free IMDB data set from Bright Data=<https://brightdata.com/products/datasets/marketplace#all> 
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Importing libraries & setting variables
+
+# COMMAND ----------
+
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
+
+# COMMAND ----------
+
+overwrite_schema = True
+movies_table_name = "gen_ai_hackathon.silver.movies_info"
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Input data read
 
 # COMMAND ----------
 
@@ -10,8 +36,8 @@ genome_tag_df = spark.read.table("gen_ai_hackathon.bronze.genome_tags")
 
 # COMMAND ----------
 
-overwrite_schema = True
-movies_table_name = "gen_ai_hackathon.silver.movies_info"
+# MAGIC %md
+# MAGIC #### Data Exploration
 
 # COMMAND ----------
 
@@ -19,15 +45,15 @@ display(movies_df.count())
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC ## Final Transformations & storing it into final table
+
+# COMMAND ----------
+
 imdb_release_date = imdb_df.withColumn("date_of_release", split(col("details_release_date"), " ", 2)[0])
 #.withColumn("place_of_release", split(col("details_release_date"), " ", 2)[1])
 imdb_year_release = imdb_release_date.withColumn('release_year', element_at(split(col("date_of_release"), "/"), -1))
 display(imdb_year_release)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC https://www.imdb.com/title/tt12180294/
 
 # COMMAND ----------
 
@@ -41,11 +67,6 @@ imdb_ids_df = imdb_ids_df.withColumnRenamed("title", "imdb_title")
 movies_merged_df = movies_df.alias("ml20").join(imdb_ids_df.alias("imdb"), on=(col("ml20.imdb_id")==col("imdb.id")), how="left")
 movies_genre_df = movies_merged_df.withColumn("genres", array_union(coalesce(col("ml20_genres"), array()), coalesce(col("genres"), array()))).drop("id", "ml20_genres")
 display(movies_genre_df)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC https://www.imdb.com/title/tt0114709/
 
 # COMMAND ----------
 
