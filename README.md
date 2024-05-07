@@ -8,7 +8,6 @@ The **Movie Recommendation RAG** is an AI-powered chatbot designed to generate m
 ## Features
 
 - **Recommendations**: The chatbot analyzes user input and suggests relevant movies based on available labels within the platform.
-- **Hallucination**: As part of its learning process, the chatbot can generate creative recommendations beyond existing data.
 - **Hackathon Project**: Developed for a hackathon, this application is not intended for production use.
 
 ## Usage
