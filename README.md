@@ -1,6 +1,16 @@
 # Movie Recommendation RAG
 ---
 
+## Inspiration
+
+**Introducing the Future of Movie Recommendations: The Movie Recommendation Assistant**
+
+In the era of OTT platforms like Netflix and Amazon, streaming movies has never been easier. However, with an ever-expanding library of films, finding the perfect movie to watch can feel like finding a needle in a haystack. Current recommendation systems, based on user click-stream data, watch history, regional top charts, and preferences, often leave us with suggestions heavily influenced by our recent streams or popular trends.
+
+What if you want a movie that fits a specific occasion, or matches your current mood? What if you want to explore beyond your usual genres and step out of your comfort zone?
+
+This solution aims to bridge the gap between you and your perfect movie. The idea behind this recommendation system is to consider not just your viewing history, but also your current desires and preferences. 
+
 ## Overview
 
 The **Movie Recommendation RAG** is an AI-powered chatbot designed to generate movie recommendations for an imaginary OTT (Over-The-Top) platform. Leveraging the power of Llama-3 as the generation model and databricks-bge-large-en for embedding, this application aims to provide personalized movie suggestions based on user preferences.
