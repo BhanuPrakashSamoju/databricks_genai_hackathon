@@ -25,7 +25,17 @@ host = "https://" + spark.conf.get("spark.databricks.workspaceUrl")
 # url used to send the request to your model from the serverless endpoint
 import os
 host = "https://" + spark.conf.get("spark.databricks.workspaceUrl")
-os.environ['DATABRICKS_TOKEN'] = dbutils.secrets.get("dbx_genai_hackathon", "rag_sp_token")
+os.environ['DATABRICKS_TOKEN'] = dbutils.secrets.get("arm_spn_mv_secrets", "spn_dbx_token")
+
+# COMMAND ----------
+
+client_id = dbutils.secrets.get("arm_spn_mv_secrets", "spn_client_id")
+spark.sql(f"GRANT USAGE ON CATALOG gen_ai_hackathon TO `{client_id}`");
+spark.sql(f"GRANT USAGE ON DATABASE gen_ai_hackathon.vector_store TO `{client_id}`");
+from databricks.sdk import WorkspaceClient
+import databricks.sdk.service.catalog as c
+WorkspaceClient().grants.update(c.SecurableType.TABLE, movies_index_name, 
+                                changes=[c.PermissionsChange(add=[c.Privilege["SELECT"]], principal=dbutils.secrets.get("arm_spn_mv_secrets", "spn_client_id"))])
 
 # COMMAND ----------
 
@@ -47,7 +57,7 @@ print(f"Test embeddings: {embedding_model.embed_query('Horror')[:20]}...")
 def get_retriever(persist_dir: str = None):
     os.environ["DATABRICKS_HOST"] = host
     #Get the vector search index
-    vsc = VectorSearchClient(workspace_url=host, service_principal_client_id="0a3cd11c-ef6d-4bd4-8682-8be5a057c556",service_principal_client_secret=os.environ['DATABRICKS_TOKEN'], disable_notice=True)
+    vsc = VectorSearchClient(workspace_url=host, personal_access_token=os.environ["DATABRICKS_TOKEN"])
     vs_index = vsc.get_index(
         endpoint_name=VECTOR_SEARCH_ENDPOINT_NAME,
         index_name=movies_index_name
@@ -89,8 +99,8 @@ instructions: ```
     3. Give importance to the keys title, genome_tags, genres, storyline, awards, imdb_rating, review_rating, top_cast, credit, then rest of keys in the order specified.
     4. If the question references any actor/cast & crew, refer for them under the keys top_cast, credit.
     5. Take the sentiment of user question into consideration, and answer the user question by find the best movie that you can recommend the user by following the importance stated in step 3.
-    6. Draft reason for each recommendation in an unbiased, & professional manner without making it up, while keeping in mind to not reveal any internal information like genome_tags & scores, user personal tags, movie_id, imdb_id etc.
-    7. Provide your recommendation/recommendations in JSON format with title, reason for recommendation, url of the movie.
+    6. Draft reason for each recommendation in an unbiased, & professional manner without making it up. 
+    7. Provide your recommendation/recommendations title, reason for recommendation, url of the movie. Do keeping in mind to not reveal any internal information like genome_tags & scores, user personal tags, movie_id, imdb_id etc.
     8. If user requested movies are not matching with any record in the context provided, reply that 'The movies requested are not in our database. Hence, we can't fulfill your request. Apologies for the inconvenience!', don't try to make up an answer.
 ```
 context:({context})
@@ -131,7 +141,7 @@ import mlflow
 import langchain
 
 mlflow.set_registry_uri("databricks-uc")
-model_name = f"{catalog}.{movies_db}.movie_recommendation_model"
+model_name = f"{catalog}.{movies_db}.movie_recommendation_model_v2"
 
 with mlflow.start_run(run_name="movie_recommendation_chatbot") as run:
     signature = infer_signature(question, answer)
@@ -148,3 +158,75 @@ with mlflow.start_run(run_name="movie_recommendation_chatbot") as run:
         input_example=question,
         signature=signature
     )
+
+# COMMAND ----------
+
+# DBTITLE 1,Function to get the latest model version registered
+from mlflow.tracking import MlflowClient
+
+def get_latest_model_version(model_name):
+    client = MlflowClient()
+    
+    # Get the list of registered model versions
+    versions = client.search_model_versions(f"name = '{model_name}'")
+    
+    # Sort the versions by the last_updated_timestamp in descending order
+    sorted_versions = sorted(versions, key=lambda v: v.last_updated_timestamp, reverse=True)
+    
+    if sorted_versions:
+        # Return the highest version number
+        return sorted_versions[0].version
+    
+    # Return None if no versions are found
+    return None
+
+print(get_latest_model_version(model_name))
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Serving the registered model by creating a new endpoint or updating the existing endpoint
+
+# COMMAND ----------
+
+# Create or update serving endpoint
+from databricks.sdk import WorkspaceClient
+from databricks.sdk.service.serving import EndpointCoreConfigInput, ServedModelInput, ServedModelInputWorkloadSize, AutoCaptureConfigInput
+
+serving_endpoint_name = f"movie_recommendation_engine"
+latest_model_version = get_latest_model_version(model_name)
+
+w = WorkspaceClient()
+endpoint_config = EndpointCoreConfigInput(
+    name=serving_endpoint_name,
+    served_models=[
+        ServedModelInput(
+            model_name=model_name,
+            model_version=latest_model_version,
+            workload_size=ServedModelInputWorkloadSize.SMALL,
+            scale_to_zero_enabled=True,
+            environment_vars={
+                "DATABRICKS_TOKEN": "{{secrets/arm_spn_mv_secrets/spn_dbx_token}}",  # <scope>/<secret> that contains an access token
+            }
+        )
+    ],
+    auto_capture_config=AutoCaptureConfigInput(
+        catalog_name="gen_ai_hackathon",
+        enabled=True, #movies_info
+        schema_name="silver",
+        table_name_prefix="movie_recommendation_rag"
+    )
+)
+
+existing_endpoint = next(
+    (e for e in w.serving_endpoints.list() if e.name == serving_endpoint_name), None
+)
+serving_endpoint_url = f"{host}/ml/endpoints/{serving_endpoint_name}"
+if existing_endpoint == None:
+    print(f"Creating the endpoint {serving_endpoint_url}, this will take a few minutes to package and deploy the endpoint...")
+    w.serving_endpoints.create_and_wait(name=serving_endpoint_name, config=endpoint_config)
+else:
+    print(f"Updating the endpoint {serving_endpoint_url} to version {latest_model_version}, this will take a few minutes to package and deploy the endpoint...")
+    w.serving_endpoints.update_config_and_wait(served_models=endpoint_config.served_models, name=serving_endpoint_name)
+    
+displayHTML(f'Your Model Endpoint Serving is now available. Open the <a href="/ml/endpoints/{serving_endpoint_name}">Model Serving Endpoint page</a> for more details.')
