@@ -3,7 +3,7 @@
 
 ## Overview
 
-The **Movie Recommendation RAG** is an AI-powered chatbot designed to generate movie recommendations for various OTT (Over-The-Top) platforms. Leveraging the power of Llama-3 as the generation model and databricks-bge-large-en for embedding, this application aims to provide personalized movie suggestions based on user preferences.
+The **Movie Recommendation RAG** is an AI-powered chatbot designed to generate movie recommendations for an imaginary OTT (Over-The-Top) platform. Leveraging the power of Llama-3 as the generation model and databricks-bge-large-en for embedding, this application aims to provide personalized movie suggestions based on user preferences.
 
 ## Features
 
